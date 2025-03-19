@@ -1,0 +1,121 @@
+import pyautogui
+import time
+
+# ================== 配置部分 ==================
+# 从位置.txt中读取坐标（自动处理中文符号和空格）
+def parse_positions(filename):
+    positions = {}
+    with open(filename, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip().replace('，', ',')  # 替换中文逗号为英文逗号
+            if '位置1' in line:
+                x = int(line.split('x=')[1].split(',')[0])
+                y = int(line.split('y=')[1])
+                positions['position1'] = (x, y)
+            elif '位置2' in line:
+                x = int(line.split('x=')[1].split(',')[0])
+                y = int(line.split('y=')[1])
+                positions['position2'] = (x, y)
+            elif '位置3' in line:
+                x = int(line.split('x=')[1].split(',')[0])
+                y = int(line.split('y=')[1])
+                positions['position3'] = (x, y)
+    return positions
+
+# 从内容文件中读取所有需要输入的内容
+def parse_contents(filename):
+    contents = []
+    with open(filename, 'r', encoding='utf-8') as f:
+        for line in f:
+            # 移除特殊字符并分割字段
+            clean_line = line.strip().replace('\ufeff', '')
+            fields = clean_line.split('\t')
+            # 将字段组合成结构化数据
+            structured_content = []
+            for i in range(0, len(fields), 10):  # 每10个字段为一组完整内容
+                group = fields[i:i+10]
+                if len(group) >= 10:
+                    structured_content.append({
+                        'meaning': group[0],
+                        'explanation': group[1],
+                        'phrase1': group[2],
+                        'example1': group[3],
+                        'phrase2': group[4],
+                        'example2': group[5],
+                        'phrase3': group[6],
+                        'example3': group[7],
+                        'phrase4': group[8],
+                        'example4': group[9]
+                    })
+            contents.extend(structured_content)
+    return contents
+
+# ================== 核心逻辑 ==================
+def click_position(x, y):
+    """精确点击指定坐标"""
+    pyautogui.moveTo(x, y, duration=0.3)
+    pyautogui.click()
+    print(f"✅ 已点击 ({x}, {y})")
+    time.sleep(0.5)
+
+def type_content(content):
+    """智能输入内容（自动换行+格式优化）"""
+    # 构建带格式的内容
+    formatted_text = f"""
+    【释义】{content['meaning']}
+    {content['explanation']}
+    
+    【词组1】{content['phrase1']}
+    {content['example1']}
+    
+    【词组2】{content['phrase2']}
+    {content['example2']}
+    
+    【词组3】{content['phrase3']}
+    {content['example3']}
+    
+    【词组4】{content['phrase4']}
+    {content['example4']}
+    """
+    pyautogui.write(formatted_text.strip(), interval=0.05)
+    print(f"📝 已输入内容: {content['meaning'][:20]}...")
+    time.sleep(0.2)
+
+def execute_workflow(positions, contents):
+    """执行完整工作流程"""
+    try:
+        for idx, content in enumerate(contents, 1):
+            print(f"\n====== 正在处理第 {idx}/{len(contents)} 条 ======")
+            
+            # 第一阶段：位置1点击
+            click_position(*positions['position1'])
+            
+            # 第二阶段：位置2点击并输入
+            click_position(*positions['position2'])
+            type_content(content)
+            
+            # 第三阶段：位置3确认
+            click_position(*positions['position3'])
+            
+            print(f"✔️ 已完成 {idx}/{len(contents)}")
+            
+    except pyautogui.FailSafeException:
+        print("\n⚠️ 安全机制触发：鼠标移动到屏幕左上角终止操作")
+
+# ================== 执行程序 ==================
+if __name__ == "__main__":
+    # 读取配置文件
+    positions = parse_positions(r"C:\Users\Qfyun\Desktop\创建anki字段\位置.txt")
+    contents = parse_contents(r"C:\Users\Qfyun\Desktop\创建anki字段\水平排列_无词性.txt")
+    
+    # 安全检查
+    print("=== 系统检查 ===")
+    print(f"定位到 {len(positions)} 个坐标位置")
+    print(f"发现 {len(contents)} 条待处理内容")
+    input("按 Enter 开始执行（5秒后启动，请保持窗口焦点）...")
+    time.sleep(5)
+    
+    # 执行主程序
+    execute_workflow(positions, contents)
+    
+    print("\n🎉 所有内容处理完成！")
